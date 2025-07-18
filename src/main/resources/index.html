@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Morse Code Translator</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* Custom font for a clean look */
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+    </style>
+</head>
+<body class="bg-slate-700 min-h-screen flex items-center justify-center p-4">
+    <div class="bg-slate-800 p-6 md:p-8 rounded-xl shadow-lg w-full max-w-4xl">
+        <!-- Title Section -->
+        <h1 class="text-white text-3xl md:text-4xl font-bold text-center mb-8">Morse Code Translator</h1>
+
+        <!-- Input Section -->
+        <div class="mb-6">
+            <label for="inputArea" id="inputLabel" class="block text-gray-300 text-lg font-medium mb-2">Text:</label>
+            <textarea
+                id="inputArea"
+                class="w-full p-4 rounded-lg bg-gray-900 text-white border border-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500
+                       min-h-[120px] max-h-[200px] md:min-h-[150px] md:max-h-[250px] resize-y"
+                placeholder="Enter your text here..."
+            ></textarea>
+        </div>
+
+        <!-- Output Section -->
+        <div class="mb-8">
+            <label for="outputArea" id="outputLabel" class="block text-gray-300 text-lg font-medium mb-2">Morse Code:</label>
+            <textarea
+                id="outputArea"
+                class="w-full p-4 rounded-lg bg-gray-900 text-white border border-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500
+                       min-h-[120px] max-h-[200px] md:min-h-[150px] md:max-h-[250px] resize-y"
+                placeholder="Translated Morse code will appear here..."
+                readonly
+            ></textarea>
+        </div>
+
+        <!-- Buttons Section -->
+        <div class="flex flex-wrap justify-center gap-4">
+            <button
+                id="playSoundButton"
+                class="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-6 rounded-lg shadow-md
+                       transition duration-300 ease-in-out transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            >
+                Play Sound
+            </button>
+            <button
+                id="copyButton"
+                class="bg-gray-600 hover:bg-gray-700 text-white font-semibold py-3 px-6 rounded-lg shadow-md
+                       transition duration-300 ease-in-out transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-gray-500"
+            >
+                Copy
+            </button>
+            <button
+                id="swapButton"
+                class="bg-green-600 hover:bg-green-700 text-white font-semibold py-3 px-6 rounded-lg shadow-md
+                       transition duration-300 ease-in-out transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-green-500"
+            >
+                Swap <->
+            </button>
+        </div>
+    </div>
+
+    <script>
+        // Get references to the elements
+        const inputArea = document.getElementById('inputArea');
+        const outputArea = document.getElementById('outputArea');
+        const inputLabel = document.getElementById('inputLabel');
+        const outputLabel = document.getElementById('outputLabel');
+        const swapButton = document.getElementById('swapButton');
+        const playSoundButton = document.getElementById('playSoundButton');
+        const copyButton = document.getElementById('copyButton');
+
+        // Base URL for your Spring Boot backend
+        const BACKEND_URL = 'http://localhost:8080/api/morse'; // Change if your backend runs on a different port/host
+
+        // Tracks the current translation mode: true for Text to Morse, false for Morse to Text
+        let isTextToMorseMode = true;
+
+        // --- Translation Functions ---
+
+        /**
+         * Translates text to Morse code using the backend API.
+         */
+        async function translateTextToMorse() {
+            const textToTranslate = inputArea.value;
+            try {
+                const response = await fetch(`${BACKEND_URL}/text-to-morse`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'text/plain' },
+                    body: textToTranslate
+                });
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                const morseOutput = await response.text();
+                outputArea.value = morseOutput;
+            } catch (error) {
+                console.error('Error translating text to Morse:', error);
+                outputArea.value = 'Error: Could not translate text.';
+            }
+        }
+
+        /**
+         * Translates Morse code to text using the backend API.
+         */
+        async function translateMorseToText() {
+            const morseToTranslate = inputArea.value;
+            try {
+                const response = await fetch(`${BACKEND_URL}/morse-to-text`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'text/plain' },
+                    body: morseToTranslate
+                });
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                const textOutput = await response.text();
+                outputArea.value = textOutput;
+            } catch (error) {
+                console.error('Error translating Morse to text:', error);
+                outputArea.value = 'Error: Could not translate Morse code.';
+            }
+        }
+
+        // --- Swap Functionality ---
+
+        /**
+         * Swaps the labels and placeholders of the input and output areas,
+         * and toggles the translation mode. Content is *not* swapped directly,
+         * as the input is always for new entry and output for result.
+         */
+        function swapMode() {
+            // Toggle the mode
+            isTextToMorseMode = !isTextToMorseMode;
+
+            // Update labels and placeholders based on the new mode
+            if (isTextToMorseMode) {
+                inputLabel.textContent = 'Text:';
+                outputLabel.textContent = 'Morse Code:';
+                inputArea.placeholder = 'Enter your text here...';
+                outputArea.placeholder = 'Translated Morse code will appear here...';
+            } else {
+                inputLabel.textContent = 'Morse Code:';
+                outputLabel.textContent = 'Text:';
+                inputArea.placeholder = 'Enter your Morse code here (e.g., .--. .-.. .- -. / -...-)...';
+                outputArea.placeholder = 'Translated text will appear here...';
+            }
+
+            // Clear both areas to prevent confusion after mode swap
+            inputArea.value = '';
+            outputArea.value = '';
+        }
+
+        // --- Copy Functionality ---
+
+        /**
+         * Copies the content of the output area to the clipboard.
+         */
+        function copyOutputToClipboard() {
+            outputArea.select(); // Select the text in the output area
+            outputArea.setSelectionRange(0, 99999); // For mobile devices
+            try {
+                document.execCommand('copy'); // Execute the copy command
+                // Optionally, provide user feedback (e.g., a temporary message)
+                console.log('Content copied to clipboard!');
+            } catch (err) {
+                console.error('Failed to copy text:', err);
+            }
+        }
+
+        // --- Sound Playback Functionality (Client-Side) ---
+
+        const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+        let oscillator = null;
+
+        /**
+         * Plays a single beep (dot or dash) using Web Audio API.
+         * @param {number} duration The duration of the beep in milliseconds.
+         * @param {number} frequency The frequency of the beep in Hz.
+         */
+        function playBeep(duration, frequency = 600) {
+            if (oscillator) {
+                oscillator.stop(); // Stop any previous sound
+                oscillator.disconnect();
+            }
+            oscillator = audioContext.createOscillator();
+            oscillator.type = 'sine'; // Sine wave for a clear tone
+            oscillator.frequency.setValueAtTime(frequency, audioContext.currentTime);
+            oscillator.connect(audioContext.destination);
+            oscillator.start();
+            return new Promise(resolve => {
+                setTimeout(() => {
+                    oscillator.stop();
+                    oscillator.disconnect();
+                    oscillator = null;
+                    resolve();
+                }, duration);
+            });
+        }
+
+        /**
+         * Plays the Morse code sound for a given Morse code string.
+         * @param {string} morseCode The Morse code string to play.
+         */
+        async function playMorseSound(morseCode) {
+            const dotDuration = 100; // 1 unit
+            const dashDuration = 3 * dotDuration;
+            const symbolPause = dotDuration; // Pause between dots/dashes in a letter
+            const letterPause = 3 * dotDuration; // Pause between letters
+            const wordPause = 7 * dotDuration; // Pause between words
+
+            const morseSymbols = morseCode.trim().split(' ');
+
+            for (let i = 0; i < morseSymbols.length; i++) {
+                const pattern = morseSymbols[i];
+
+                if (pattern === '/') {
+                    await new Promise(resolve => setTimeout(resolve, wordPause));
+                    continue;
+                }
+
+                for (let j = 0; j < pattern.length; j++) {
+                    const char = pattern.charAt(j);
+                    if (char === '.') {
+                        await playBeep(dotDuration);
+                    } else if (char === '-') {
+                        await playBeep(dashDuration);
+                    }
+                    // Pause between symbols in a letter, except after the last one
+                    if (j < pattern.length - 1) {
+                        await new Promise(resolve => setTimeout(resolve, symbolPause));
+                    }
+                }
+
+                // After each letter, if it's not the last one
+                if (i < morseSymbols.length - 1) {
+                    await new Promise(resolve => setTimeout(resolve, letterPause));
+                }
+            }
+        }
+
+
+        // --- Event Listeners ---
+
+        // Add event listener for input changes to trigger translation
+        inputArea.addEventListener('input', () => {
+            if (isTextToMorseMode) {
+                translateTextToMorse();
+            } else {
+                translateMorseToText();
+            }
+        });
+
+        swapButton.addEventListener('click', swapMode); // Call swapMode function
+        playSoundButton.addEventListener('click', () => playMorseSound(outputArea.value));
+        copyButton.addEventListener('click', copyOutputToClipboard);
+
+        // Initial state setup (ensure output is readonly and input is editable)
+        inputArea.removeAttribute('readonly');
+        outputArea.setAttribute('readonly', 'true');
+    </script>
+</body>
+</html>
